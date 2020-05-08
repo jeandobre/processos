@@ -1,0 +1,84 @@
+stages:
+  - build
+  - scan
+  - deploy
+  - expose
+  - loadtest
+
+services:
+  - docker:19.03.8-dind
+
+variables:
+  DOCKER_TLS_CERTDIR: ""
+
+#Build APP image
+build_image:
+  stage: build
+  image: docker:19.03.8
+  script:
+    - export DOCKER_HOST="tcp://localhost:2375"
+    - docker api -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker pull $CI_REGISTRY_IMAGE:latest || true
+    - docker build --cache-from $CI_REGISTRY_IMAGE:latest --tag $CI_REGISTRY_IMAGE:$CI_PIPELINE_ID --tag $CI_REGISTRY_IMAGE:latest --network host .
+    - docker push "$CI_REGISTRY_IMAGE"
+    
+image_scanning:
+  stage: scan
+  image: docker:stable
+  services:
+  - docker:dind
+  variables:
+    DOCKER_DRIVER: overlay2
+  allow_failure: true
+  script:
+  - export DOCKER_HOST="tcp://localhost:2375"
+  - docker api -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  - docker run -d --name db arminc/clair-db:latest
+  - docker run -p 6060:6060 --link db:postgres -d --name clair --restart on-failure arminc/clair-local-scan:v2.0.1
+  - apk add -U wget ca-certificates
+  - docker pull $CI_REGISTRY_IMAGE:latest
+  - wget https://github.com/arminc/clair-scanner/releases/download/v8/clair-scanner_linux_amd64
+  - mv clair-scanner_linux_amd64 clair-scanner
+  - chmod +x clair-scanner
+  - touch clair-whitelist.yml
+  - while( ! wget -q -O /dev/null http://docker:6060/v1/namespaces ) ; do sleep 1 ; done
+  - retries=0
+  - echo "Waiting for clair daemon to start"
+  - while( ! wget -T 10 -q -O /dev/null http://docker:6060/v1/namespaces ) ; do sleep 1 ; echo -n "." ; if [ $retries -eq 10 ] ; then echo " Timeout, aborting." ; exit 1 ; fi ; retries=$(($retries+1)) ; done
+  - ./clair-scanner -c http://docker:6060 --ip $(hostname -i) -r gl-container-scanning-report.json -l clair.log -w clair-whitelist.yml $CI_REGISTRY_IMAGE:latest || true
+  - cat gl-container-scanning-report.json
+  artifacts:
+    paths: [gl-container-scanning-report.json]
+  only:
+  - master
+
+
+#Deploy kubernetes app in this project
+deploy_api:
+  stage: deploy
+  image: registry.ufgd.edu.br/root/deploy-api:latest
+  script:
+    - echo $K_CONFIG | base64 -d >> ~/.kube/config
+    - kubectl get nodes
+    - kubectl apply -f deployment.yml
+    - kubectl -n ufgd-hmlg1 get all
+    
+service_api:
+  stage: expose
+  image: registry.ufgd.edu.br/root/deploy-api:latest
+  script:
+    - echo $K_CONFIG | base64 -d >> ~/.kube/config
+    - kubectl get nodes
+    - kubectl apply -f service.yml
+    - kubectl -n ufgd-hmlg1 get all
+
+loadtest:
+  stage: loadtest
+  only:
+    - master
+  image:
+    name: loadimpact/k6:latest
+    entrypoint: [""]
+  script:
+    - echo "executing k6 againt site with 9000 requests in 30s..."
+    - k6 run ./loadtesting/prf-tst.js

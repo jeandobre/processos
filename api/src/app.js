@@ -4,6 +4,7 @@ import express from "express";
 import cors from "cors";
 import { errors } from "celebrate";
 import routes from "./routes";
+import db from "./db";
 
 const app = express();
 

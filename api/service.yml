@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: ufgd-api
+    tier: backend
+  name: ufgd-api-backend-svc
+  namespace: ufgd-hmlg1
+spec:
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    nodePort: 32200
+  selector:
+    run: ufgd-api
+    tier: backend
+  type: LoadBalancer
+  loadBalancerIP: 200.129.209.117
+  sessionAffinity: ClientIP

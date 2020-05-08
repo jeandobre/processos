@@ -1,0 +1,28 @@
+{
+	"parserOptions": {
+			"ecmaVersion": 2020,
+			"parser": "babel-eslint",
+			"sourceType": "module",
+			"ecmaFeatures": {
+					"globalReturn": true,
+					"jsx": true
+			}
+	},
+	"rules": {
+		"no-unused-vars": ["warn"],
+		"no-var": ["off"],
+		"one-var": ["off"],
+		"no-extra-semi": ["error"],
+		"quotes": ["error","single"],
+		"indent": ["error","tab"],
+		"semi": ["error","always"],
+		"comma-spacing": ["error", { "before": false, "after": true }],
+		"eqeqeq":["error", "always"],
+		"default-case":"error",
+		"no-multi-spaces": "error",
+		"no-redeclare": "error",
+		"no-sequences": "error",
+		"no-self-assign": "error",
+		"vars-on-top": "error"
+    }
+}
