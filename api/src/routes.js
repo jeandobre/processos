@@ -1,3 +1,4 @@
+import express from "express";
 import Index from "./controllers/Index";
 
 const routes = new express.Router();
