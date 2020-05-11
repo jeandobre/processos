@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: ufgd-api
+    tier: backend
+    version: v0.1
+  name: ufgd-api-backend
+  namespace: ufgd-hmlg1
+spec:
+  replicas: 20
+  selector:
+    matchLabels:
+      run: ufgd-api
+      tier: backend
+      version: v0.1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        run: ufgd-api
+        tier: backend
+        version: v0.1
+    spec:
+      containers:
+      - name: ufgd-api-backend
+        image: registry.ufgd.edu.br/root/api:latest
+        imagePullPolicy: Always
+        ports:
+        -  containerPort: 3000
+        resources:
+          limits:
+            memory: 128Mi
+            cpu: 1
+          requests:
+            memory: 64Mi
+            cpu: 250m
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
