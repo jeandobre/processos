@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: ufgd-login
+    tier: frontend
+    version: v0.1
+  name: login-client
+  namespace: ufgd-hmlg1
+spec:
+  replicas: 20
+  selector:
+    matchLabels:
+      run: ufgd-login
+      tier: frontend
+      version: v0.1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        run: ufgd-login
+        tier: frontend
+        version: v0.1
+    spec:
+      containers:
+      - name: login-client
+        image: registry.ufgd.edu.br/root/login_client:latest
+        imagePullPolicy: Always
+        ports:
+        -  containerPort: 80
+        resources:
+          limits:
+            memory: 128Mi
+            cpu: 1
+          requests:
+            memory: 64Mi
+            cpu: 250m
+#      imagePullSecrets:
+#      - name: regcred
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
